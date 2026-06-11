@@ -229,12 +229,20 @@ export const searchSchools = schedules.task({
           scrapeOptions: { formats: ["markdown"] },
         });
 
+        console.log(`Search result for "${query}":`, {
+          success: searchResult.success,
+          dataLength: searchResult.data ? searchResult.data.length : 0,
+          error: (searchResult as any).error,
+        });
+
         if (searchResult.success && searchResult.data) {
           for (const result of searchResult.data) {
             if (result.url) {
               allUrls.add(result.url);
             }
           }
+        } else if (!searchResult.success) {
+          console.error(`Search failed for "${query}": ${(searchResult as any).error}`);
         }
       } catch (err) {
         console.error(`Search failed for "${query}":`, err);
