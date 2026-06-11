@@ -1,0 +1,22 @@
+{
+  "name": "day-4",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "create-sheet.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@trigger.dev/sdk": "^4.4.6",
+    "dotenv": "^17.4.2",
+    "firecrawl": "^4.25.2",
+    "googleapis": "^173.0.0"
+  },
+  "devDependencies": {
+    "@trigger.dev/build": "^4.4.6"
+  }
+}
