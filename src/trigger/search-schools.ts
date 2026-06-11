@@ -256,9 +256,16 @@ export const searchSchools = schedules.task({
       };
     }
 
+    // Cap initial scraping to avoid timeout (batch too many at once)
+    const maxInitialScrape = 10;
+    const urlsToScrape = Array.from(allUrls).slice(0, maxInitialScrape);
+    if (allUrls.size > maxInitialScrape) {
+      console.log(`⚠️  Capping initial scrape to ${maxInitialScrape} URLs (found ${allUrls.size} total)`);
+    }
+
     // Trigger and wait for all scraping tasks
     const results = await scrapeSchool.batchTriggerAndWait(
-      Array.from(allUrls).map((url) => ({
+      urlsToScrape.map((url) => ({
         payload: { url },
         options: {
           idempotencyKey: `scrape-${Buffer.from(url).toString("base64")}`,
@@ -266,25 +273,29 @@ export const searchSchools = schedules.task({
       }))
     );
 
-    console.log(`Completed ${results.length} scraping tasks`);
+    console.log(`Completed ${Array.isArray(results) ? results.length : 0} scraping tasks`);
 
     // Collect schools and discover additional URLs from directories
     const scrapedSchools: School[] = [];
     const discoveredUrls = new Set<string>();
 
-    for (const result of results) {
-      if (result.ok && result.output) {
-        const output = result.output as any;
-        if (output.type === "directory" && output.discoveredUrls) {
-          // Found a directory, add discovered URLs for processing
-          for (const url of output.discoveredUrls) {
-            discoveredUrls.add(url);
+    if (Array.isArray(results)) {
+      for (const result of results) {
+        if (result.ok && result.output) {
+          const output = result.output as any;
+          if (output.type === "directory" && output.discoveredUrls) {
+            // Found a directory, add discovered URLs for processing
+            for (const url of output.discoveredUrls) {
+              discoveredUrls.add(url);
+            }
+          } else {
+            // It's a school, add to results
+            scrapedSchools.push(output as School);
           }
-        } else {
-          // It's a school, add to results
-          scrapedSchools.push(output as School);
         }
       }
+    } else {
+      console.warn("Unexpected results format from batchTriggerAndWait:", typeof results);
     }
 
     // If we found directories with schools, scrape those schools (with a safety cap)
