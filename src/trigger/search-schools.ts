@@ -3,13 +3,6 @@ import { scrapeSchool } from "./scrape-school.js";
 import { google } from "googleapis";
 import FirecrawlApp from "firecrawl";
 
-const firecrawlKey = process.env.FIRECRAWL_API_KEY;
-if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY is not set");
-
-const firecrawl = new FirecrawlApp({
-  apiKey: firecrawlKey,
-});
-
 interface School {
   name: string;
   location: string;
@@ -210,6 +203,13 @@ export const searchSchools = schedules.task({
   cron: "0 6 * * 1", // Monday 6 AM UTC
 
   run: async () => {
+    const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+    if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY is not set");
+
+    const firecrawl = new FirecrawlApp({
+      apiKey: firecrawlKey,
+    });
+
     console.log("🔍 Starting school search...");
 
     const queries = [

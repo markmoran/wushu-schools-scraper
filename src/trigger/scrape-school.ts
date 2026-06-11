@@ -1,13 +1,6 @@
 import { task } from "@trigger.dev/sdk";
 import FirecrawlApp from "firecrawl";
 
-const firecrawlKey = process.env.FIRECRAWL_API_KEY;
-if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY is not set");
-
-const firecrawl = new FirecrawlApp({
-  apiKey: firecrawlKey,
-});
-
 interface School {
   name: string;
   location: string;
@@ -94,6 +87,13 @@ export const scrapeSchool = task({
   },
 
   run: async (payload: { url: string }): Promise<School | ScraperResponse> => {
+    const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+    if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY is not set");
+
+    const firecrawl = new FirecrawlApp({
+      apiKey: firecrawlKey,
+    });
+
     const { url } = payload;
 
     console.log(`Scraping: ${url}`);
