@@ -243,6 +243,18 @@ export const searchSchools = schedules.task({
 
     console.log(`Found ${allUrls.size} unique URLs`);
 
+    // If no URLs found, return early
+    if (allUrls.size === 0) {
+      console.log("No schools found in search results");
+      return {
+        searched: 0,
+        scraped: 0,
+        added: 0,
+        updated: 0,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
     // Trigger and wait for all scraping tasks
     const results = await scrapeSchool.batchTriggerAndWait(
       Array.from(allUrls).map((url) => ({
