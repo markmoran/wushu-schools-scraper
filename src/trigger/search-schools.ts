@@ -213,9 +213,7 @@ export const searchSchools = schedules.task({
     console.log("🔍 Starting school search...");
 
     const queries = [
-      "wushu schools United States",
-      "kung fu schools United States",
-      "tai chi schools United States",
+      "Chinese martial arts schools wushu kung fu tai chi United States",
     ];
 
     const allUrls = new Set<string>();
