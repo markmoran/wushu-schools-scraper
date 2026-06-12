@@ -273,32 +273,44 @@ export const searchSchools = schedules.task({
       }))
     );
 
-    // batchTriggerAndWait returns an array of Result objects
-    console.log(`Completed ${Array.isArray(results) ? results.length : 0} scraping tasks`);
+    // Log the actual response structure for debugging
+    console.log("batchTriggerAndWait response type:", typeof results);
+    console.log("batchTriggerAndWait response keys:", Object.keys(results as any));
+    console.log("batchTriggerAndWait response:", JSON.stringify(results, null, 2));
+
+    // Handle both possible return types
+    let resultArray: any[] = [];
+    if (Array.isArray(results)) {
+      resultArray = results;
+    } else if ((results as any).ok && (results as any).output) {
+      // It's a single Result object with output array
+      resultArray = (results as any).output || [];
+    } else if ((results as any).runs) {
+      // Maybe it's { runs: [...] }
+      resultArray = (results as any).runs || [];
+    }
+
+    console.log(`Completed ${resultArray.length} scraping tasks`);
 
     // Collect schools and discover additional URLs from directories
     const scrapedSchools: School[] = [];
     const discoveredUrls = new Set<string>();
 
-    if (Array.isArray(results)) {
-      for (const result of results) {
-        if (result.ok && result.output) {
-          const output = result.output as any;
-          if (output.type === "directory" && output.discoveredUrls) {
-            // Found a directory, add discovered URLs for processing
-            for (const url of output.discoveredUrls) {
-              discoveredUrls.add(url);
-            }
-          } else {
-            // It's a school, add to results
-            scrapedSchools.push(output as School);
+    for (const result of resultArray) {
+      if (result.ok && result.output) {
+        const output = result.output as any;
+        if (output.type === "directory" && output.discoveredUrls) {
+          // Found a directory, add discovered URLs for processing
+          for (const url of output.discoveredUrls) {
+            discoveredUrls.add(url);
           }
         } else {
-          console.warn(`Task failed: ${result.error || "unknown error"}`);
+          // It's a school, add to results
+          scrapedSchools.push(output as School);
         }
+      } else {
+        console.warn(`Task failed:`, result);
       }
-    } else {
-      console.error("batchTriggerAndWait returned unexpected type:", typeof results);
     }
 
     // If we found directories with schools, scrape those schools (with a safety cap)
