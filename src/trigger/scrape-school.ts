@@ -99,70 +99,27 @@ export const scrapeSchool = task({
     console.log(`Scraping: ${url}`);
 
     try {
-      // Define the JSON schema for LLM extraction
-      const schoolSchema = {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            description: "The name of the martial arts school or academy",
-          },
-          location: {
-            type: "string",
-            description:
-              "The city and state (e.g., 'San Francisco, CA') where the school is located",
-          },
-          address: {
-            type: "string",
-            description: "The street address of the school",
-          },
-          phone: {
-            type: "string",
-            description: "The phone number of the school",
-          },
-          instructors: {
-            type: "string",
-            description:
-              "Names of the instructors, separated by commas if multiple",
-          },
-          styles: {
-            type: "string",
-            description:
-              "The martial arts styles taught (e.g., Kung Fu, Tai Chi, Wushu)",
-          },
-          schools: {
-            type: "array",
-            description:
-              "If this is a directory page, list the schools found on the page",
-            items: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                url: { type: "string" },
-              },
-            },
-          },
-        },
-        required: ["name", "location"],
-      };
-
-      // Scrape with LLM extraction
+      // Scrape as markdown (cheaper than LLM extraction)
       const scrapeResult = await firecrawl.scrape(url, {
-        formats: ["extract"],
-        extract: {
-          schema: schoolSchema as any,
-        },
+        formats: ["markdown"],
       });
 
-      if (!scrapeResult.extract) {
-        throw new Error("Failed to extract data from page");
+      if (!scrapeResult.markdown) {
+        throw new Error("Failed to scrape content from page");
       }
 
-      const extracted = scrapeResult.extract as unknown as ExtractedData;
+      const markdown = scrapeResult.markdown;
+      const lowerMarkdown = markdown.toLowerCase();
 
-      // Check if this is a directory (contains 3+ schools)
-      if (isDirectory(extracted)) {
-        console.log(`📋 Detected directory with ${extracted.schools?.length} schools: ${url}`);
+      // Simple directory detection: check for key indicators
+      const isDir =
+        lowerMarkdown.includes("directory") ||
+        lowerMarkdown.includes("schools near") ||
+        lowerMarkdown.includes("all schools") ||
+        markdown.match(/school\s+1|school\s+2|location\s+1|location\s+2/i);
+
+      if (isDir) {
+        console.log(`📋 Detected directory: ${url}`);
         const discoveredUrls = await discoverSchoolUrls(url);
         console.log(`Found ${discoveredUrls.length} schools in directory`);
         return {
@@ -171,15 +128,52 @@ export const scrapeSchool = task({
         } as ScraperResponse;
       }
 
-      // This is an actual school - return extracted data
+      // Extract school details from markdown using regex
+      const titleMatch =
+        markdown.match(/^#\s+(.+)$/m) || markdown.match(/^##\s+(.+)$/m);
+      const name = titleMatch ? titleMatch[1].trim() : "Unknown School";
+
+      const phoneMatch = markdown.match(
+        /\(?(\d{3})\)?[-.\s]?(\d{3})[-.\s]?(\d{4})/
+      );
+      const phone = phoneMatch
+        ? `${phoneMatch[1]}-${phoneMatch[2]}-${phoneMatch[3]}`
+        : "";
+
+      const addressMatch = markdown.match(
+        /(\d+\s+[A-Za-z\s]+(?:St|Ave|Blvd|Rd|Drive|Lane|Court|Way|Road|Street|Avenue|Boulevard))/i
+      );
+      const address = addressMatch ? addressMatch[1] : "";
+
+      const instructorsMatch = markdown.match(
+        /(?:Instructor|Teacher|Master|Sensei)s?:?\s*(.+?)(?:\n|$)/i
+      );
+      const instructors = instructorsMatch ? instructorsMatch[1].trim() : "";
+
+      const stylesMatch = markdown.match(
+        /(?:styles?|martial arts|disciplines?|classes?|specialties?):?\s*(.+?)(?:\n|$)/i
+      );
+      const styles = stylesMatch
+        ? stylesMatch[1].trim()
+        : "Kung Fu, Wushu, Tai Chi";
+
+      // Try to extract location from content
+      let location = "Unknown Location";
+      const locationMatch = markdown.match(
+        /(?:located in|based in|in\s+)([A-Za-z\s,]+?)(?:\.|,|\n)/i
+      );
+      if (locationMatch) {
+        location = locationMatch[1].trim();
+      }
+
       const school: School = {
-        name: extracted.name || "Unknown School",
-        location: extracted.location || "Unknown Location",
-        address: extracted.address || "",
-        phone: extracted.phone || "",
+        name,
+        location,
+        address,
+        phone,
         website: url,
-        instructors: extracted.instructors || "",
-        styles: extracted.styles || "Kung Fu, Wushu, Tai Chi",
+        instructors,
+        styles,
         lastUpdated: new Date().toISOString().split("T")[0],
       };
 
