@@ -273,16 +273,15 @@ export const searchSchools = schedules.task({
       }))
     );
 
-    // batchTriggerAndWait returns a Result object with an output array
-    const resultArray = results.output || [];
-    console.log(`Completed ${Array.isArray(resultArray) ? resultArray.length : 0} scraping tasks`);
+    // batchTriggerAndWait returns an array of Result objects
+    console.log(`Completed ${Array.isArray(results) ? results.length : 0} scraping tasks`);
 
     // Collect schools and discover additional URLs from directories
     const scrapedSchools: School[] = [];
     const discoveredUrls = new Set<string>();
 
-    if (Array.isArray(resultArray)) {
-      for (const result of resultArray) {
+    if (Array.isArray(results)) {
+      for (const result of results) {
         if (result.ok && result.output) {
           const output = result.output as any;
           if (output.type === "directory" && output.discoveredUrls) {
@@ -294,10 +293,12 @@ export const searchSchools = schedules.task({
             // It's a school, add to results
             scrapedSchools.push(output as School);
           }
+        } else {
+          console.warn(`Task failed: ${result.error || "unknown error"}`);
         }
       }
     } else {
-      console.warn("Unexpected results format from batchTriggerAndWait:", { type: typeof resultArray, ok: (results as any).ok });
+      console.error("batchTriggerAndWait returned unexpected type:", typeof results);
     }
 
     // If we found directories with schools, scrape those schools (with a safety cap)
