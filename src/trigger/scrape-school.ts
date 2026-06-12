@@ -36,6 +36,22 @@ function isDirectory(extractedData: ExtractedData): boolean {
   return extractedData.schools.length >= 3;
 }
 
+function isSocialMediaUrl(url: string): boolean {
+  const socialMediaDomains = [
+    "facebook.com",
+    "instagram.com",
+    "tiktok.com",
+    "linkedin.com",
+    "twitter.com",
+    "youtube.com",
+    "reddit.com",
+    "pinterest.com",
+    "snapchat.com",
+  ];
+  const lowerUrl = url.toLowerCase();
+  return socialMediaDomains.some((domain) => lowerUrl.includes(domain));
+}
+
 async function discoverSchoolUrls(url: string): Promise<string[]> {
   try {
     console.log(`🔍 Discovering schools in directory: ${url}`);
@@ -48,9 +64,15 @@ async function discoverSchoolUrls(url: string): Promise<string[]> {
       return [];
     }
 
-    // Filter for school-like URLs (exclude the directory page itself)
+    // Filter for school-like URLs (exclude the directory page itself and social media)
     const schoolUrls = mapResult.links.filter((link: string) => {
       const lowerLink = link.toLowerCase();
+
+      // Skip social media
+      if (isSocialMediaUrl(link)) {
+        return false;
+      }
+
       // Exclude common non-school patterns
       if (
         lowerLink.includes("directory") ||

@@ -218,12 +218,12 @@ export const searchSchools = schedules.task({
 
     const allUrls = new Set<string>();
 
-    // Search for schools
+    // Search for schools (limit: 5 results to avoid excessive credits)
     for (const query of queries) {
       console.log(`Searching: ${query}`);
       try {
         const searchResult = await firecrawl.search(query, {
-          limit: 15,
+          limit: 5,
           scrapeOptions: { formats: ["markdown"] },
         });
 
